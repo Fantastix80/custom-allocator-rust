@@ -1,12 +1,15 @@
 #![no_std]
 #![no_main]
 
+extern crate libc;
+
 use core::panic::PanicInfo;
 use core::ptr::null_mut;
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr::NonNull;
 use core::mem::size_of;
 use core::cell::UnsafeCell;
+use core::fmt::{self, Write};
 
 #[panic_handler]
 fn panic(_panic: &PanicInfo) -> ! {
@@ -120,7 +123,32 @@ unsafe impl GlobalAlloc for FreeListAllocator {
     }
 }
 
+struct Writer;
+
+impl Write for Writer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for byte in s.as_bytes() {
+            unsafe {
+                put_char(*byte);
+            }
+        }
+        Ok(())
+    }
+}
+
+unsafe fn put_char(c: u8) {
+    libc::write(1, &c as *const u8 as *const _, 1);
+}
+
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    let a = 10;
+    let b = 20;
+    let c = a + b;
+    
+    let mut writer = Writer;
+
+    write!(writer, "c = {}\n", c).unwrap();
+
     loop {}
 }
