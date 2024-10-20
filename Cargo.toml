@@ -11,3 +11,6 @@ panic = "abort"
 
 [dependencies]
 libc = { version = "0.2", default-features = false }
+
+[dev-dependencies]
+mirai = "0.0.4"

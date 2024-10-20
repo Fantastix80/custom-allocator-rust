@@ -152,3 +152,10 @@ pub extern "C" fn _start() -> ! {
 
     loop {}
 }
+
+#[cfg(miri)]
+#[no_mangle]
+fn miri_start(_argc: isize, _argv: *const *const u8) -> isize {
+    // Appeler la fonction _start lors de l'exécution avec Miri
+    _start();
+}
