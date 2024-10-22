@@ -11,6 +11,12 @@ use core::mem::size_of;
 use core::cell::UnsafeCell;
 use core::fmt::{self, Write};
 
+// Taille du pool de mémoire pour l'allocateur (exemple de 1024 octets)
+const POOL_SIZE: usize = 1024;
+
+// Déclare un buffer statique pour servir de pool de mémoire
+static mut MEMORY_POOL: [u8; POOL_SIZE] = [0; POOL_SIZE];
+
 #[panic_handler]
 fn panic(_panic: &PanicInfo) -> ! {
     loop {}
@@ -123,6 +129,9 @@ unsafe impl GlobalAlloc for FreeListAllocator {
     }
 }
 
+// Implémentation du trait Sync pour permettre à notre allocateur static d'être partagé entre les threads
+unsafe impl Sync for FreeListAllocator {}
+
 struct Writer;
 
 impl Write for Writer {
@@ -140,8 +149,22 @@ unsafe fn put_char(c: u8) {
     libc::write(1, &c as *const u8 as *const _, 1);
 }
 
+// Fonction appelée en cas d'erreurs, on l'initialise car en no_std, on doit créer notre propre fonction.
+#[no_mangle]
+pub extern "C" fn rust_eh_personality() {}
+
+// Création d'une instance de l'allocateur
+#[global_allocator]
+static GLOBAL_ALLOCATOR: FreeListAllocator = FreeListAllocator::new(unsafe { MEMORY_POOL.as_ptr() as *mut u8 }, POOL_SIZE);
+
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+
+    // Initialisation de l'allocateur
+    unsafe {
+        GLOBAL_ALLOCATOR.init();
+    }
+
     let a = 10;
     let b = 20;
     let c = a + b;
